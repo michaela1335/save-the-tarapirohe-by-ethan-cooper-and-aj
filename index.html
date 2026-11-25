@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAVE THE TARA PIROHE!</title>
+    <!-- Tailwind CSS for clean, responsive UI overlays and modals -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka for playful, friendly headings and Nunito for crisp readability -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Typography and Game Visual Styling */
+        body {
+            font-family: 'Nunito', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Fredoka', sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(180deg, #7dd3fc 0%, #bae6fd 30%, #cbd5e1 100%);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        /* Custom Scrollbar for Modals */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Tactile 3D Button Style */
+        .btn-game {
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+        }
+        .btn-game:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 rgba(0, 0, 0, 0.25);
+        }
+        .btn-game:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+        }
+        /* Subtle Floating Animation for Mascot */
+        @keyframes floatBird {
+            0%, 100% { transform: translateY(0px) rotate(-1deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .animate-bird {
+            animation: floatBird 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Main Interactive Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top-Right Utility Controls (Sound & Fun Facts) -->
+    <div class="fixed top-3 right-3 z-40 flex items-center gap-2">
+        <button id="btn-fun-facts" class="btn-game bg-amber-400 hover:bg-amber-300 text-slate-900 font-display font-bold px-3.5 py-2 rounded-2xl border-2 border-amber-600 text-sm sm:text-base flex items-center gap-1.5 cursor-pointer">
+            <span>💡</span>
+            <span class="hidden sm:inline">Fun Facts</span>
+        </button>
+        <button id="btn-mute" title="Toggle Sound" class="btn-game bg-white/95 hover:bg-white text-slate-800 font-bold p-2.5 rounded-2xl border-2 border-slate-300 text-base cursor-pointer">
+            🔊
+        </button>
+    </div>
+
+    <!-- Active Gameplay HUD (Hidden on Welcome/Victory Screens) -->
+    <div id="hud-overlay" class="hidden fixed top-3 left-3 right-32 sm:right-44 z-30 pointer-events-none flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Level Badge -->
+        <div class="bg-slate-900/85 backdrop-blur-md text-white px-4 py-2 rounded-2xl border-2 border-sky-400 shadow-lg flex items-center gap-2">
+            <span id="hud-level-badge" class="bg-sky-500 text-slate-950 font-display font-bold text-xs sm:text-sm px-2.5 py-0.5 rounded-xl">LEVEL 1</span>
+            <span id="hud-level-title" class="font-display font-bold text-sm sm:text-lg tracking-wide text-sky-100">Find Food</span>
+        </div>
+
+        <!-- Objective Counter -->
+        <div class="bg-white/95 backdrop-blur-md text-slate-900 px-4 py-2 rounded-2xl border-2 border-emerald-500 shadow-lg flex items-center gap-2">
+            <span id="hud-obj-icon" class="text-lg sm:text-xl">🐟</span>
+            <span id="hud-obj-text" class="font-extrabold text-sm sm:text-base">Food: 0 / 10</span>
+        </div>
+
+        <!-- Health / Status Pill -->
+        <div id="hud-health-box" class="bg-white/95 backdrop-blur-md text-slate-900 px-3.5 py-2 rounded-2xl border-2 border-rose-400 shadow-lg flex items-center gap-1.5">
+            <span id="hud-hearts" class="text-base sm:text-lg tracking-widest">❤️❤️❤️</span>
+        </div>
+
+        <!-- Action Hint Pill -->
+        <div id="hud-action-hint" class="hidden lg:flex bg-amber-100/95 text-amber-950 px-3.5 py-2 rounded-2xl border-2 border-amber-400 shadow-md text-xs font-bold items-center gap-1.5">
+            <span>✨</span>
+            <span id="hud-hint-text">Move with Arrow Keys / WASD or Drag/Tap!</span>
+        </div>
+    </div>
+
+    <!-- On-Screen Mobile / Mouse Swoop / Call Action Button (Useful in Level 3 & 5) -->
+    <div id="action-btn-container" class="hidden fixed bottom-5 right-5 z-30">
+        <button id="btn-swoop" class="btn-game bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-display font-bold px-5 py-4 rounded-full border-4 border-white shadow-xl text-base sm:text-lg flex items-center gap-2 cursor-pointer">
+            <span>🦅</span>
+            <span>SWOOP / SCARE!</span>
+        </button>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 1. START / WELCOME SCREEN OVERLAY                         -->
+    <!-- ========================================================= -->
+    <div id="screen-welcome" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-6 bg-slate-900/45 backdrop-blur-xs overflow-y-auto">
+        <div class="bg-white/95 backdrop-blur-md w-full max-w-4xl rounded-3xl border-4 border-sky-500 shadow-2xl overflow-hidden my-auto max-h-[94vh] flex flex-col">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-sky-600 via-cyan-600 to-teal-600 p-4 sm:p-6 text-center text-white relative">
+                <div class="inline-block bg-amber-300 text-slate-900 font-display font-bold text-xs sm:text-sm px-3 py-1 rounded-full mb-2 shadow-sm">
+                    🇳🇿 AOTEAROA NEW ZEALAND CONSERVATION ADVENTURE
+                </div>
+                <h1 class="text-3xl sm:text-5xl font-display font-bold tracking-wide drop-shadow-md">
+                    SAVE THE TARA PIROHE!
+                </h1>
+                <p class="mt-2 text-sky-50 font-semibold text-sm sm:text-lg max-w-2xl mx-auto">
+                    Welcome! Welcome to Save the Tara Pirohe! Your mission is to help protect one of New Zealand's endangered native birds.
+                </p>
+            </div>
+
+            <!-- Scrollable Content Body -->
+            <div class="p-4 sm:p-6 overflow-y-auto custom-scroll space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                    <!-- About the Bird Card with Custom SVG Illustration -->
+                    <div class="bg-sky-50 rounded-2xl p-4 sm:p-5 border-2 border-sky-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-xl sm:text-2xl font-display font-bold text-sky-900">About the Bird</h2>
+                                <span class="bg-rose-100 text-rose-700 text-xs font-extrabold px-2.5 py-1 rounded-full border border-rose-300">ENDANGERED</span>
+                            </div>
+                            <!-- Custom SVG Illustration of the Tara Pirohe (Black-Fronted Tern) -->
+                            <div class="my-2 bg-gradient-to-b from-sky-200 to-cyan-100 rounded-2xl p-3 flex items-center justify-center border border-sky-300 relative overflow-hidden">
+                                <svg class="w-44 h-28 animate-bird" viewBox="0 0 220 130" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Illustration of a Tara Pirohe (Black-fronted tern)">
+                                    <!-- Braided river water ripples -->
+                                    <path d="M20 112 Q 60 106, 100 112 T 180 112" stroke="#0284c7" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+                                    <path d="M45 121 Q 85 116, 125 121 T 195 121" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" opacity="0.35"/>
+                                    <!-- Legs (Bright Orange-Red) -->
+                                    <path d="M102 84 L98 106 M92 106 L104 106" stroke="#f97316" stroke-width="3.5" stroke-linecap="round"/>
+                                    <path d="M116 84 L118 106 M112 106 L124 106" stroke="#f97316" stroke-width="3.5" stroke-linecap="round"/>
+                                    <!-- Forked Tail Feathers (Light Grey/White) -->
+                                    <path d="M55 68 L22 56 L36 69 L20 79 L56 75 Z" fill="#cbd5e1" stroke="#64748b" stroke-width="1.5"/>
+                                    <!-- White Body -->
+                                    <ellipse cx="106" cy="68" rx="46" ry="21" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                                    <!-- Soft Grey Back & Folded Wing -->
+                                    <path d="M62 63 C 78 44, 125 44, 142 62 C 122 73, 76 76, 52 70 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+                                    <path d="M72 64 C 90 54, 118 55, 134 63" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
+                                    <!-- Head (White lower cheek, distinctive Black Cap & Forehead) -->
+                                    <circle cx="150" cy="52" r="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+                                    <!-- Black Forehead & Cap -->
+                                    <path d="M134 50 C 136 35, 158 33, 166 49 C 158 48, 145 49, 134 50 Z" fill="#0f172a"/>
+                                    <!-- White cheek crescent under eye -->
+                                    <path d="M142 54 Q 154 57 163 52" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+                                    <!-- Eye -->
+                                    <circle cx="154" cy="48" r="2.6" fill="#ffffff"/>
+                                    <circle cx="154.5" cy="48" r="1.4" fill="#0f172a"/>
+                                    <!-- Bright Orange Bill -->
+                                    <path d="M165 48 L192 52 L165 55 Z" fill="#f97316" stroke="#c2410c" stroke-width="1"/>
+                                </svg>
+                            </div>
+                            <p class="text-slate-700 text-sm sm:text-base leading-relaxed font-medium">
+                                The <strong>tara pirohe</strong>, also called the <strong>black-fronted tern</strong>, is a rare bird that lives in New Zealand. It is mostly found near braided rivers in the South Island. It has a <strong>white body</strong>, <strong>grey wings</strong> and a <strong>black forehead</strong>. It eats small fish and insects.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Your Mission Checklist Card -->
+                    <div class="bg-emerald-50 rounded-2xl p-4 sm:p-5 border-2 border-emerald-200 flex flex-col justify-between">
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-display font-bold text-emerald-900 mb-2">Your Mission</h2>
+                            <p class="text-emerald-800 text-sm sm:text-base font-bold mb-3">
+                                Your job is to help the tara pirohe survive! You must:
+                            </p>
+                            <ul class="space-y-2.5 text-slate-800 text-sm sm:text-base font-semibold">
+                                <li class="flex items-start gap-2.5 bg-white/80 p-2 rounded-xl border border-emerald-200">
+                                    <span class="text-lg">🐟</span>
+                                    <span>Collect food for the birds.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 bg-white/80 p-2 rounded-xl border border-emerald-200">
+                                    <span class="text-lg">🐾</span>
+                                    <span>Avoid dangerous predators.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 bg-white/80 p-2 rounded-xl border border-emerald-200">
+                                    <span class="text-lg">🥚</span>
+                                    <span>Protect the eggs from being eaten.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 bg-white/80 p-2 rounded-xl border border-emerald-200">
+                                    <span class="text-lg">♻️</span>
+                                    <span>Clean up rubbish near the river.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 bg-white/80 p-2 rounded-xl border border-emerald-200">
+                                    <span class="text-lg">🐣</span>
+                                    <span>Help baby birds grow up safely.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Quick Bar -->
+                <div class="bg-slate-100 rounded-2xl p-3 border border-slate-300 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm text-slate-700 font-bold">
+                    <span>🎮 <strong>Controls:</strong> Arrow Keys / WASD to fly</span>
+                    <span>•</span>
+                    <span>🖱️ / 📱 Touch & Drag or Tap anywhere to steer</span>
+                    <span>•</span>
+                    <span>🦅 Spacebar / Swoop button to scare predators</span>
+                </div>
+
+                <!-- Start Mission CTA -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                    <button id="btn-start-game" class="btn-game w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-white font-display font-bold text-xl sm:text-2xl px-10 py-4 rounded-2xl border-2 border-emerald-700 cursor-pointer flex items-center justify-center gap-3">
+                        <span>🚀</span>
+                        <span>Start Mission: Level 1</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 2. LEVEL INTRO / BRIEFING MODAL                           -->
+    <!-- ========================================================= -->
+    <div id="screen-level-intro" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-xs">
+        <div class="bg-white w-full max-w-lg rounded-3xl border-4 border-sky-500 shadow-2xl overflow-hidden text-center p-6 sm:p-8 space-y-5">
+            <div id="intro-badge" class="inline-block bg-sky-100 text-sky-800 font-display font-bold text-sm px-4 py-1.5 rounded-full border border-sky-300">
+                LEVEL 1 OF 5
+            </div>
+            <div id="intro-emoji" class="text-6xl">🐟</div>
+            <h2 id="intro-title" class="text-3xl sm:text-4xl font-display font-bold text-slate-900">
+                Level 1: Find Food
+            </h2>
+            <p id="intro-desc" class="text-slate-700 text-base sm:text-lg font-semibold leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                Help the tara pirohe find small fish and insects. Collect 10 pieces of food to complete the level!
+            </p>
+            <div id="intro-tip" class="text-xs sm:text-sm font-bold text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                Tip: Fly over the turquoise river channels to spot swimming fish and hovering insects!
+            </div>
+            <button id="btn-begin-level" class="btn-game w-full bg-sky-500 hover:bg-sky-400 text-white font-display font-bold text-xl py-4 rounded-2xl border-2 border-sky-700 cursor-pointer">
+                Let's Go!
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 3. LEVEL COMPLETE / RETRY MODAL                           -->
+    <!-- ========================================================= -->
+    <div id="screen-level-result" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-xs">
+        <div class="bg-white w-full max-w-lg rounded-3xl border-4 border-emerald-500 shadow-2xl overflow-hidden text-center p-6 sm:p-8 space-y-5">
+            <div id="result-emoji" class="text-6xl">🌟</div>
+            <h2 id="result-title" class="text-3xl sm:text-4xl font-display font-bold text-slate-900">
+                Level Complete!
+            </h2>
+            <p id="result-desc" class="text-slate-700 text-base sm:text-lg font-semibold leading-relaxed">
+                Awesome job helping the tara pirohe!
+            </p>
+            <div id="result-fact-box" class="bg-sky-50 p-4 rounded-2xl border border-sky-200 text-left">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-sky-700">Did You Know?</span>
+                <p id="result-fact-text" class="text-sm sm:text-base font-bold text-slate-800 mt-1">
+                    The tara pirohe lays its eggs on gravel riverbeds.
+                </p>
+            </div>
+            <button id="btn-next-level" class="btn-game w-full bg-emerald-500 hover:bg-emerald-400 text-white font-display font-bold text-xl py-4 rounded-2xl border-2 border-emerald-700 cursor-pointer">
+                Next Level ➡️
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 4. VICTORY / CONGRATULATIONS SCREEN                       -->
+    <!-- ========================================================= -->
+    <div id="screen-victory" class="hidden fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+        <div class="bg-white w-full max-w-3xl rounded-3xl border-4 border-amber-400 shadow-2xl overflow-hidden my-auto max-h-[94vh] flex flex-col">
+            <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 p-5 sm:p-7 text-center text-white">
+                <div class="text-5xl mb-2">🎉🐦🇳🇿</div>
+                <h1 class="text-3xl sm:text-5xl font-display font-bold drop-shadow">
+                    Congratulations!
+                </h1>
+                <p class="mt-2 text-base sm:text-xl font-bold text-emerald-50 max-w-2xl mx-auto">
+                    You helped protect the tara pirohe! Remember, even small actions can help save New Zealand's native wildlife.
+                </p>
+                <div class="mt-3 inline-block bg-amber-300 text-slate-950 font-display font-bold text-base sm:text-lg px-5 py-1.5 rounded-full shadow">
+                    THANK YOU FOR PLAYING!
+                </div>
+            </div>
+
+            <div class="p-5 sm:p-6 overflow-y-auto custom-scroll space-y-5">
+                <!-- Final Score Banner -->
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-center">
+                    <div class="text-xs font-extrabold uppercase tracking-wider text-amber-800">Final Conservation Impact</div>
+                    <div id="victory-score-summary" class="text-2xl sm:text-3xl font-display font-bold text-slate-900 mt-1">
+                        You helped 8 Tara Pirohe survive safely!
+                    </div>
+                </div>
+
+                <!-- All 5 Fun Facts Recap -->
+                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 sm:p-5">
+                    <h3 class="text-xl font-display font-bold text-sky-900 mb-3 flex items-center gap-2">
+                        <span>💡</span>
+                        <span>Tara Pirohe Fun Facts</span>
+                    </h3>
+                    <ol class="list-decimal list-inside space-y-2 text-slate-800 text-sm sm:text-base font-bold">
+                        <li>The tara pirohe is also called the black-fronted tern.</li>
+                        <li>It is native to New Zealand.</li>
+                        <li>It lays its eggs on gravel riverbeds.</li>
+                        <li>It is endangered.</li>
+                        <li>Predators and habitat changes threaten its survival.</li>
+                    </ol>
+                </div>
+
+                <button id="btn-play-again" class="btn-game w-full bg-emerald-500 hover:bg-emerald-400 text-white font-display font-bold text-xl py-4 rounded-2xl border-2 border-emerald-700 cursor-pointer">
+                    🔄 Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 5. FUN FACTS MODAL (Accessible anytime via top button)    -->
+    <!-- ========================================================= -->
+    <div id="modal-fun-facts" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white w-full max-w-lg rounded-3xl border-4 border-amber-400 shadow-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl sm:text-3xl font-display font-bold text-slate-900 flex items-center gap-2">
+                    <span>💡</span>
+                    <span>Fun Facts</span>
+                </h2>
+                <button id="btn-close-facts" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-9 h-9 rounded-full flex items-center justify-center cursor-pointer">
+                    ✕
+                </button>
+            </div>
+            <p class="text-sm text-slate-600 font-semibold">
+                Learn more about New Zealand's braided river specialist, the tara pirohe:
+            </p>
+            <ol class="space-y-2.5 text-slate-800 text-sm sm:text-base font-bold">
+                <li class="bg-amber-50 p-3 rounded-xl border border-amber-200">1. The tara pirohe is also called the black-fronted tern.</li>
+                <li class="bg-amber-50 p-3 rounded-xl border border-amber-200">2. It is native to New Zealand.</li>
+                <li class="bg-amber-50 p-3 rounded-xl border border-amber-200">3. It lays its eggs on gravel riverbeds.</li>
+                <li class="bg-amber-50 p-3 rounded-xl border border-amber-200">4. It is endangered.</li>
+                <li class="bg-amber-50 p-3 rounded-xl border border-amber-200">5. Predators and habitat changes threaten its survival.</li>
+            </ol>
+            <button id="btn-close-facts-bottom" class="btn-game w-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-display font-bold text-lg py-3 rounded-2xl border-2 border-amber-600 cursor-pointer">
+                Got it!
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ============================================================================
+ * SAVE THE TARA PIROHE! — New Zealand Braided River Conservation Game
+ * ============================================================================
+ * Complete single-file 2D Canvas game featuring:
+ * - Procedural South Island Braided River & Southern Alps backdrop
+ * - Web Audio API synthesized sound effects (no external files)
+ * - Full keyboard (WASD / Arrow keys / Spacebar) & pointer/touch controls
+ * - All 5 levels from the user's design document:
+ *    Level 1: Find Food (Collect 10 small fish and insects)
+ *    Level 2: Avoid Predators (Cross the braided river dodging stoats, rats, cats)
+ *    Level 3: Save the Eggs (Protect gravel riverbed nests until eggs hatch)
+ *    Level 4: Clean the River (Pick up rubbish & deliver to recycling bin)
+ *    Final Level: Save the Tara Pirohe! (Escort baby chicks across the river to sanctuary)
+ */
+
+(function () {
+    'use strict';
+
+    // ------------------------------------------------------------------------
+    // 1. WEB AUDIO SYNTHESIZER (Sound Effects without External URLs)
+    // ------------------------------------------------------------------------
+    class SoundEffects {
+        constructor() {
+            this.ctx = null;
+            this.muted = false;
+        }
+
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    this.ctx = new AudioCtx();
+                }
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        playTone(freq, type, duration, vol = 0.15, slideFreq = null) {
+            if (this.muted) return;
+            this.init();
+            if (!this.ctx) return;
+
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (slideFreq) {
+                osc.frequency.exponentialRampToValueAtTime(slideFreq, now + duration);
+            }
+
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        collect() {
+            this.playTone(587.33, 'sine', 0.14, 0.16, 880); // D5 -> A5 cheerful chirp
+        }
+
+        recycle() {
+            this.playTone(440, 'triangle', 0.12, 0.18, 659.25);
+            setTimeout(() => this.playTone(659.25, 'triangle', 0.16, 0.18, 880), 90);
+        }
+
+        swoop() {
+            this.playTone(720, 'sawtooth', 0.18, 0.12, 320); // Sharp tern alarm call
+        }
+
+        hurt() {
+            this.playTone(220, 'sawtooth', 0.28, 0.2, 110);
+        }
+
+        hatch() {
+            this.playTone(523.25, 'sine', 0.12, 0.15, 659.25);
+            setTimeout(() => this.playTone(783.99, 'sine', 0.18, 0.15, 1046.5), 100);
+        }
+
+        levelWin() {
+            const notes = [523.25, 659.25, 783.99, 1046.5];
+            notes.forEach((n, i) => {
+                setTimeout(() => this.playTone(n, 'triangle', 0.22, 0.18), i * 110);
+            });
+        }
+    }
+
+    const sfx = new SoundEffects();
+
+    // ------------------------------------------------------------------------
+    // 2. GAME DATA & EXACT LORE / LEVEL DEFINITIONS
+    // ------------------------------------------------------------------------
+    const FUN_FACTS = [
+        "The tara pirohe is also called the black-fronted tern.",
+        "It is native to New Zealand.",
+        "It lays its eggs on gravel riverbeds.",
+        "It is endangered.",
+        "Predators and habitat changes threaten its survival."
+    ];
+
+    const LEVELS = [
+        {
+            id: 1,
+            badge: "LEVEL 1 OF 5",
+            title: "Level 1: Find Food",
+            shortTitle: "Find Food",
+            emoji: "🐟",
+            description: "Help the tara pirohe find small fish and insects. Collect 10 pieces of food to complete the level!",
+            tip: "Fly over the braided river channels to catch swimming silverfish and hovering dragonflies!",
+            fact: FUN_FACTS[0]
+        },
+        {
+            id: 2,
+            badge: "LEVEL 2 OF 5",
+            title: "Level 2: Avoid Predators",
+            shortTitle: "Avoid Predators",
+            emoji: "🐾",
+            description: "Watch out! Stoats, rats and cats can be dangerous to the tara pirohe. Avoid them to stay safe!",
+            tip: "Fly from the left riverbank all the way to the safe golden nesting island on the right without touching predators!",
+            fact: FUN_FACTS[4]
+        },
+        {
+            id: 3,
+            badge: "LEVEL 3 OF 5",
+            title: "Level 3: Save the Eggs",
+            shortTitle: "Save the Eggs",
+            emoji: "🥚",
+            description: "Find the nests and protect the eggs from predators. Make sure the baby birds are safe!",
+            tip: "Fly close to approaching stoats, rats, and cats (or press Space / Swoop) to scare them away before the timer ends!",
+            fact: FUN_FACTS[2]
+        },
+        {
+            id: 4,
+            badge: "LEVEL 4 OF 5",
+            title: "Level 4: Clean the River",
+            shortTitle: "Clean the River",
+            emoji: "♻️",
+            description: "Pick up rubbish and help keep the river clean. A healthy river is important for wildlife!",
+            tip: "Pick up 8 pieces of rubbish from the river and gravel bars and carry them to the green Recycling Station!",
+            fact: FUN_FACTS[1]
+        },
+        {
+            id: 5,
+            badge: "FINAL LEVEL",
+            title: "Final Level: Save the Tara Pirohe!",
+            shortTitle: "Save the Tara Pirohe!",
+            emoji: "🐣",
+            description: "You have reached the final level! Help as many tara pirohe birds as you can survive.",
+            tip: "Guide the baby chicks to the Sanctuary Island on the right while scaring predators and feeding chicks!",
+            fact: FUN_FACTS[3]
+        }
+    ];
+
+    // ------------------------------------------------------------------------
+    // 3. CANVAS & RESPONSIVE ENVIRONMENT SETUP
+    // ------------------------------------------------------------------------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    // Pre-generated decorative gravel stones & tussock clumps for braided riverbed realism
+    let riverPebbles = [];
+    let tussockClumps = [];
+    let mountainPeaks = [];
+
+    function generateEnvironmentDecor() {
+        riverPebbles = [];
+        const pebbleColors = ['#94a3b8', '#cbd5e1', '#64748b', '#a8a29e', '#d6d3d1'];
+        for (let i = 0; i < 110; i++) {
+            riverPebbles.push({
+                x: Math.random() * width,
+                y: height * 0.24 + Math.random() * (height * 0.74),
+                rx: 3 + Math.random() * 6,
+                ry: 2 + Math.random() * 4,
+                color: pebbleColors[Math.floor(Math.random() * pebbleColors.length)]
+            });
+        }
+
+        tussockClumps = [];
+        for (let i = 0; i < 24; i++) {
+            tussockClumps.push({
+                x: Math.random() * width,
+                y: height * 0.26 + Math.random() * (height * 0.7),
+                scale: 0.7 + Math.random() * 0.6
+            });
+        }
+
+        mountainPeaks = [];
+        const numPeaks = 8;
+        for (let i = 0; i <= numPeaks; i++) {
+            mountainPeaks.push({
+                x: (width / numPeaks) * i,
+                peakY: height * (0.06 + (i % 2 === 0 ? 0.03 : 0.08))
+            });
+        }
+    }
+
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        generateEnvironmentDecor();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // ------------------------------------------------------------------------
+    // 4. GAME STATE & ENTITIES
+    // ------------------------------------------------------------------------
+    const state = {
+        mode: 'WELCOME', // 'WELCOME', 'INTRO', 'PLAYING', 'RESULT', 'VICTORY'
+        currentLevelIndex: 0,
+        lastTime: 0,
+        elapsed: 0,
+
+        // Player (Tara Pirohe)
+        player: {
+            x: 160,
+            y: 300,
+            vx: 0,
+            vy: 0,
+            radius: 22,
+            speed: 330,
+            wingPhase: 0,
+            facing: 1, // 1 = right, -1 = left
+            invulnTimer: 0,
+            swoopTimer: 0,
+            carryingTrash: false,
+            carryingFood: false
+        },
+
+        // Input tracking
+        keys: {},
+        pointerActive: false,
+        pointerTarget: { x: 0, y: 0 },
+
+        // Level-specific state
+        hearts: 3,
+        score: 0,
+        targetScore: 10,
+        levelTimer: 35,
+        levelSuccess: true,
+
+        // Entities
+        foods: [],
+        predators: [],
+        nests: [],
+        rubbish: [],
+        chicks: [],
+        particles: [],
+        floatingTexts: [],
+
+        // Finale stats
+        birdsSavedTotal: 0
+    };
+
+    // ------------------------------------------------------------------------
+    // 5. INPUT HANDLING (Keyboard + Mouse + Touch)
+    // ------------------------------------------------------------------------
+    window.addEventListener('keydown', (e) => {
+        state.keys[e.code] = true;
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+            if (state.mode === 'PLAYING') e.preventDefault();
+        }
+        if (e.code === 'Space' && state.mode === 'PLAYING') {
+            triggerSwoop();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        state.keys[e.code] = false;
+    });
+
+    function updatePointerFromEvent(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        state.pointerTarget.x = clientX - rect.left;
+        state.pointerTarget.y = clientY - rect.top;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (state.mode !== 'PLAYING') return;
+        sfx.init();
+        state.pointerActive = true;
+        updatePointerFromEvent(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!state.pointerActive || state.mode !== 'PLAYING') return;
+        updatePointerFromEvent(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+        state.pointerActive = false;
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (state.mode !== 'PLAYING') return;
+        sfx.init();
+        state.pointerActive = true;
+        updatePointerFromEvent(e);
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!state.pointerActive || state.mode !== 'PLAYING') return;
+        updatePointerFromEvent(e);
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => {
+        state.pointerActive = false;
+    });
+
+    // ------------------------------------------------------------------------
+    // 6. PARTICLE & FLOATING TEXT HELPERS
+    // ------------------------------------------------------------------------
+    function spawnParticles(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+            const speed = 50 + Math.random() * 130;
+            state.particles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.45 + Math.random() * 0.3,
+                maxLife: 0.75,
+                radius: 3 + Math.random() * 4,
+                color
+            });
+        }
+    }
+
+    function spawnFloatingText(x, y, text, color = '#ffffff') {
+        state.floatingTexts.push({
+            x,
+            y,
+            text,
+            color,
+            life: 1.1
+        });
+    }
+
+    function triggerSwoop() {
+        if (state.player.swoopTimer > 0) return;
+        state.player.swoopTimer = 0.55;
+        sfx.swoop();
+        spawnParticles(state.player.x, state.player.y, '#38bdf8', 14);
+        spawnFloatingText(state.player.x, state.player.y - 28, "CHIRP! SCARE!", "#fef08a");
+
+        // Scare nearby predators within radius
+        const scareRadius = 155;
+        state.predators.forEach((pred) => {
+            const dist = Math.hypot(pred.x - state.player.x, pred.y - state.player.y);
+            if (dist < scareRadius) {
+                pred.scaredTimer = 2.6;
+                const angle = Math.atan2(pred.y - state.player.y, pred.x - state.player.x);
+                pred.vx = Math.cos(angle) * 260;
+                pred.vy = Math.sin(angle) * 260;
+                spawnParticles(pred.x, pred.y, '#fbbf24', 10);
+                spawnFloatingText(pred.x, pred.y - 20, "Scared away!", "#fde047");
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // 7. LEVEL INITIALIZATION LOGIC
+    // ------------------------------------------------------------------------
+    function setupLevel(index) {
+        state.currentLevelIndex = index;
+        const lvl = LEVELS[index];
+
+        // Reset common player & HUD properties
+        state.player.x = Math.min(130, width * 0.15);
+        state.player.y = height * 0.56;
+        state.player.vx = 0;
+        state.player.vy = 0;
+        state.player.facing = 1;
+        state.player.invulnTimer = 1.0;
+        state.player.swoopTimer = 0;
+        state.player.carryingTrash = false;
+        state.player.carryingFood = false;
+        state.pointerActive = false;
+
+        state.hearts = 3;
+        state.score = 0;
+        state.foods = [];
+        state.predators = [];
+        state.nests = [];
+        state.rubbish = [];
+        state.chicks = [];
+        state.particles = [];
+        state.floatingTexts = [];
+
+        const playTop = height * 0.26;
+        const playBottom = height - 45;
+
+        if (lvl.id === 1) {
+            // LEVEL 1: Find Food (Collect 10 small fish and insects)
+            state.targetScore = 10;
+            for (let i = 0; i < 12; i++) {
+                spawnFoodItem(playTop, playBottom);
+            }
+        } else if (lvl.id === 2) {
+            // LEVEL 2: Avoid Predators (Reach the safe nesting island on the right)
+            state.targetScore = 1;
+            const predatorTypes = ['stoat', 'rat', 'cat'];
+            const count = width < 640 ? 5 : 7;
+            for (let i = 0; i < count; i++) {
+                const px = width * (0.28 + (i / count) * 0.52);
+                const py = playTop + 30 + Math.random() * (playBottom - playTop - 60);
+                const speedY = (115 + Math.random() * 90) * (i % 2 === 0 ? 1 : -1);
+                state.predators.push({
+                    type: predatorTypes[i % predatorTypes.length],
+                    x: px,
+                    y: py,
+                    vx: (Math.random() - 0.5) * 45,
+                    vy: speedY,
+                    radius: 22,
+                    scaredTimer: 0
+                });
+            }
+        } else if (lvl.id === 3) {
+            // LEVEL 3: Save the Eggs (Protect 3 gravel nests until timer reaches 0)
+            state.levelTimer = 28;
+            state.targetScore = 3;
+            const nestPositions = [
+                { x: width * 0.34, y: height * 0.44 },
+                { x: width * 0.56, y: height * 0.68 },
+                { x: width * 0.74, y: height * 0.42 }
+            ];
+            nestPositions.forEach((pos, idx) => {
+                state.nests.push({
+                    id: idx,
+                    x: pos.x,
+                    y: pos.y,
+                    eggs: 2,
+                    hatched: false,
+                    flashTimer: 0
+                });
+            });
+
+            // Spawn initial predators targeting nests
+            for (let i = 0; i < 4; i++) {
+                spawnNestPredator(playTop, playBottom);
+            }
+        } else if (lvl.id === 4) {
+            // LEVEL 4: Clean the River (Collect 8 rubbish items & drop at bin)
+            state.targetScore = 8;
+            const trashTypes = ['bottle', 'can', 'wrapper', 'line'];
+            for (let i = 0; i < 8; i++) {
+                state.rubbish.push({
+                    type: trashTypes[i % trashTypes.length],
+                    x: width * (0.22 + Math.random() * 0.68),
+                    y: playTop + 20 + Math.random() * (playBottom - playTop - 40),
+                    bobPhase: Math.random() * Math.PI * 2,
+                    collected: false
+                });
+            }
+        } else if (lvl.id === 5) {
+            // FINAL LEVEL: Save the Tara Pirohe! (Escort baby chicks across the braided river)
+            state.targetScore = 5; // Save 5 chicks (bonus points for feeding!)
+            state.birdsSavedTotal = 0;
+
+            // Spawn 5 cute baby chicks on the left gravel bar that follow you when called/approached
+            for (let i = 0; i < 5; i++) {
+                state.chicks.push({
+                    id: i,
+                    x: 85 + (i % 2) * 38,
+                    y: height * (0.36 + i * 0.11),
+                    following: false,
+                    saved: false,
+                    fed: false,
+                    hopPhase: Math.random() * Math.PI * 2
+                });
+            }
+
+            // Spawn a few fish so player can feed chicks for extra health/speed
+            for (let i = 0; i < 5; i++) {
+                spawnFoodItem(playTop, playBottom);
+            }
+
+            // Spawn patrolling predators
+            const predatorTypes = ['stoat', 'cat', 'rat', 'stoat'];
+            for (let i = 0; i < 4; i++) {
+                state.predators.push({
+                    type: predatorTypes[i % predatorTypes.length],
+                    x: width * (0.36 + i * 0.13),
+                    y: playTop + 40 + Math.random() * (playBottom - playTop - 80),
+                    vx: 0,
+                    vy: (105 + i * 18) * (i % 2 === 0 ? 1 : -1),
+                    radius: 22,
+                    scaredTimer: 0
+                });
+            }
+        }
+
+        updateHUD();
+    }
+
+    function spawnFoodItem(playTop, playBottom) {
+        const isFish = Math.random() < 0.55;
+        state.foods.push({
+            type: isFish ? 'fish' : 'insect',
+            x: width * (0.18 + Math.random() * 0.74),
+            y: playTop + 20 + Math.random() * (playBottom - playTop - 40),
+            vx: isFish ? (40 + Math.random() * 50) * (Math.random() < 0.5 ? 1 : -1) : (Math.random() - 0.5) * 70,
+            vy: isFish ? 0 : (Math.random() - 0.5) * 70,
+            phase: Math.random() * Math.PI * 2
+        });
+    }
+
+    function spawnNestPredator(playTop, playBottom) {
+        const types = ['stoat', 'rat', 'cat'];
+        const edge = Math.floor(Math.random() * 3); // top, bottom, or right edge
+        let x, y;
+        if (edge === 0) {
+            x = width * (0.25 + Math.random() * 0.7);
+            y = playTop - 10;
+        } else if (edge === 1) {
+            x = width * (0.25 + Math.random() * 0.7);
+            y = playBottom + 10;
+        } else {
+            x = width + 15;
+            y = playTop + Math.random() * (playBottom - playTop);
+        }
+
+        state.predators.push({
+            type: types[Math.floor(Math.random() * types.length)],
+            x,
+            y,
+            vx: 0,
+            vy: 0,
+            radius: 22,
+            speed: 58 + Math.random() * 26,
+            scaredTimer: 0
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // 8. HUD & UI SCREEN MANAGEMENT
+    // ------------------------------------------------------------------------
+    const hudOverlay = document.getElementById('hud-overlay');
+    const actionBtnContainer = document.getElementById('action-btn-container');
+
+    function showScreen(screenName) {
+        state.mode = screenName;
+        document.getElementById('screen-welcome').classList.toggle('hidden', screenName !== 'WELCOME');
+        document.getElementById('screen-level-intro').classList.toggle('hidden', screenName !== 'INTRO');
+        document.getElementById('screen-level-result').classList.toggle('hidden', screenName !== 'RESULT');
+        document.getElementById('screen-victory').classList.toggle('hidden', screenName !== 'VICTORY');
+
+        const isPlaying = screenName === 'PLAYING';
+        hudOverlay.classList.toggle('hidden', !isPlaying);
+        const showSwoop = isPlaying && (LEVELS[state.currentLevelIndex].id === 3 || LEVELS[state.currentLevelIndex].id === 5);
+        actionBtnContainer.classList.toggle('hidden', !showSwoop);
+    }
+
+    function openLevelIntro(index) {
+        const lvl = LEVELS[index];
+        document.getElementById('intro-badge').textContent = lvl.badge;
+        document.getElementById('intro-emoji').textContent = lvl.emoji;
+        document.getElementById('intro-title').textContent = lvl.title;
+        document.getElementById('intro-desc').textContent = lvl.description;
+        document.getElementById('intro-tip').textContent = "💡 " + lvl.tip;
+        showScreen('INTRO');
+    }
+
+    function finishLevel(success, customMessage = null) {
+        state.levelSuccess = success;
+        const lvl = LEVELS[state.currentLevelIndex];
+
+        if (success) {
+            sfx.levelWin();
+            // If final level, go directly to the Grand Congratulations Screen!
+            if (state.currentLevelIndex === LEVELS.length - 1) {
+                const savedCount = Math.max(1, state.birdsSavedTotal);
+                document.getElementById('victory-score-summary').textContent =
+                    `You helped ${savedCount} Tara Pirohe bird${savedCount === 1 ? '' : 's'} survive safely!`;
+                showScreen('VICTORY');
+                return;
+            }
+
+            document.getElementById('result-emoji').textContent = "🌟";
+            document.getElementById('result-title').textContent = `${lvl.shortTitle} Complete!`;
+            document.getElementById('result-desc').textContent =
+                customMessage || "Ka pai! You did a fantastic job protecting the tara pirohe!";
+            document.getElementById('result-fact-text').textContent = lvl.fact;
+            const nextBtn = document.getElementById('btn-next-level');
+            nextBtn.textContent = `Continue to ${LEVELS[state.currentLevelIndex + 1].shortTitle} ➡️`;
+            nextBtn.className = "btn-game w-full bg-emerald-500 hover:bg-emerald-400 text-white font-display font-bold text-xl py-4 rounded-2xl border-2 border-emerald-700 cursor-pointer";
+        } else {
+            sfx.hurt();
+            document.getElementById('result-emoji').textContent = "💪";
+            document.getElementById('result-title').textContent = "Try Again!";
+            document.getElementById('result-desc').textContent =
+                customMessage || "Watch out for predators! Let's give that level another go to keep the tara pirohe safe.";
+            document.getElementById('result-fact-text').textContent = lvl.fact;
+            const nextBtn = document.getElementById('btn-next-level');
+            nextBtn.textContent = "🔄 Retry Level";
+            nextBtn.className = "btn-game w-full bg-amber-500 hover:bg-amber-400 text-white font-display font-bold text-xl py-4 rounded-2xl border-2 border-amber-700 cursor-pointer";
+        }
+
+        showScreen('RESULT');
+    }
+
+    function updateHUD() {
+        const lvl = LEVELS[state.currentLevelIndex];
+        document.getElementById('hud-level-badge').textContent = lvl.id === 5 ? "FINAL LEVEL" : `LEVEL ${lvl.id}`;
+        document.getElementById('hud-level-title').textContent = lvl.shortTitle;
+
+        const objIcon = document.getElementById('hud-obj-icon');
+        const objText = document.getElementById('hud-obj-text');
+        const hintText = document.getElementById('hud-hint-text');
+
+        if (lvl.id === 1) {
+            objIcon.textContent = "🐟";
+            objText.textContent = `Food: ${state.score} / ${state.targetScore}`;
+            hintText.textContent = "Catch 10 fish & insects!";
+        } else if (lvl.id === 2) {
+            objIcon.textContent = "🏝️";
+            objText.textContent = "Reach the Nesting Island ➡️";
+            hintText.textContent = "Dodge stoats, rats & cats!";
+        } else if (lvl.id === 3) {
+            objIcon.textContent = "🥚";
+            const activeNests = state.nests.filter(n => n.eggs > 0).length;
+            objText.textContent = `Nests Safe: ${activeNests}/3 • Time: ${Math.ceil(state.levelTimer)}s`;
+            hintText.textContent = "Fly near predators or press Space to scare!";
+        } else if (lvl.id === 4) {
+            objIcon.textContent = "♻️";
+            objText.textContent = state.player.carryingTrash
+                ? `Carry to Green Bin! (${state.score}/${state.targetScore})`
+                : `River Cleaned: ${state.score} / ${state.targetScore}`;
+            hintText.textContent = "Pick up rubbish & drop at the Recycling Bin!";
+        } else if (lvl.id === 5) {
+            objIcon.textContent = "🐣";
+            const followingCount = state.chicks.filter(c => c.following && !c.saved).length;
+            objText.textContent = `Saved: ${state.birdsSavedTotal}/5 (Following: ${followingCount})`;
+            hintText.textContent = "Touch chicks so they follow you to the Sanctuary!";
+        }
+
+        const heartsStr = "❤️".repeat(Math.max(0, state.hearts)) + "🖤".repeat(Math.max(0, 3 - state.hearts));
+        document.getElementById('hud-hearts').textContent = heartsStr;
+    }
+
+    // Wire up UI Buttons
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+        sfx.init();
+        sfx.collect();
+        openLevelIntro(0);
+    });
+
+    document.getElementById('btn-begin-level').addEventListener('click', () => {
+        sfx.init();
+        setupLevel(state.currentLevelIndex);
+        showScreen('PLAYING');
+    });
+
+    document.getElementById('btn-next-level').addEventListener('click', () => {
+        sfx.init();
+        if (state.levelSuccess) {
+            openLevelIntro(state.currentLevelIndex + 1);
+        } else {
+            setupLevel(state.currentLevelIndex);
+            showScreen('PLAYING');
+        }
+    });
+
+    document.getElementById('btn-play-again').addEventListener('click', () => {
+        sfx.init();
+        openLevelIntro(0);
+    });
+
+    document.getElementById('btn-swoop').addEventListener('click', () => {
+        if (state.mode === 'PLAYING') triggerSwoop();
+    });
+
+    // Fun Facts Modal Toggle
+    const modalFacts = document.getElementById('modal-fun-facts');
+    document.getElementById('btn-fun-facts').addEventListener('click', () => {
+        modalFacts.classList.remove('hidden');
+    });
+    document.getElementById('btn-close-facts').addEventListener('click', () => {
+        modalFacts.classList.add('hidden');
+    });
+    document.getElementById('btn-close-facts-bottom').addEventListener('click', () => {
+        modalFacts.classList.add('hidden');
+    });
+
+    // Mute Toggle
+    const btnMute = document.getElementById('btn-mute');
+    btnMute.addEventListener('click', () => {
+        sfx.muted = !sfx.muted;
+        btnMute.textContent = sfx.muted ? '🔇' : '🔊';
+    });
+
+    // ------------------------------------------------------------------------
+    // 9. GAMEPLAY UPDATE LOOP (Physics, AI, Collisions)
+    // ------------------------------------------------------------------------
+    function damagePlayer(reasonText) {
+        if (state.player.invulnTimer > 0) return;
+        state.hearts -= 1;
+        state.player.invulnTimer = 1.6;
+        sfx.hurt();
+        spawnParticles(state.player.x, state.player.y, '#f43f5e', 16);
+        spawnFloatingText(state.player.x, state.player.y - 25, reasonText || "Watch out!", "#fda4af");
+        updateHUD();
+
+        if (state.hearts <= 0) {
+            finishLevel(false, "Oh no! A predator got too close to the tara pirohe. Let's try again!");
+        }
+    }
+
+    function updateGameplay(dt) {
+        const p = state.player;
+        const lvl = LEVELS[state.currentLevelIndex];
+
+        if (p.invulnTimer > 0) p.invulnTimer -= dt;
+        if (p.swoopTimer > 0) p.swoopTimer -= dt;
+        p.wingPhase += dt * 13;
+
+        // Player Movement (Keyboard + Pointer)
+        let moveX = 0;
+        let moveY = 0;
+        if (state.keys['ArrowLeft'] || state.keys['KeyA']) moveX -= 1;
+        if (state.keys['ArrowRight'] || state.keys['KeyD']) moveX += 1;
+        if (state.keys['ArrowUp'] || state.keys['KeyW']) moveY -= 1;
+        if (state.keys['ArrowDown'] || state.keys['KeyS']) moveY += 1;
+
+        if (moveX !== 0 || moveY !== 0) {
+            const len = Math.hypot(moveX, moveY);
+            moveX /= len;
+            moveY /= len;
+            p.vx = moveX * p.speed;
+            p.vy = moveY * p.speed;
+        } else if (state.pointerActive) {
+            const dx = state.pointerTarget.x - p.x;
+            const dy = state.pointerTarget.y - p.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 8) {
+                p.vx = (dx / dist) * p.speed;
+                p.vy = (dy / dist) * p.speed;
+            } else {
+                p.vx *= 0.8;
+                p.vy *= 0.8;
+            }
+        } else {
+            p.vx *= 0.82;
+            p.vy *= 0.82;
+        }
+
+        if (Math.abs(p.vx) > 12) {
+            p.facing = p.vx >= 0 ? 1 : -1;
+        }
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        // Keep player within playable riverbed bounds
+        const minY = height * 0.24;
+        const maxY = height - 28;
+        p.x = Math.max(28, Math.min(width - 28, p.x));
+        p.y = Math.max(minY, Math.min(maxY, p.y));
+
+        // --------------------------------------------------------------------
+        // LEVEL 1: FIND FOOD
+        // --------------------------------------------------------------------
+        if (lvl.id === 1) {
+            state.foods.forEach((food) => {
+                food.phase += dt * 4;
+                food.x += food.vx * dt;
+                food.y += food.vy * dt + Math.sin(food.phase) * 0.4;
+
+                if (food.x < 40 || food.x > width - 40) food.vx *= -1;
+                if (food.y < minY + 10 || food.y > maxY - 10) food.vy *= -1;
+
+                const dist = Math.hypot(food.x - p.x, food.y - p.y);
+                if (dist < p.radius + 18) {
+                    food.collected = true;
+                    state.score += 1;
+                    sfx.collect();
+                    spawnParticles(food.x, food.y, '#34d399', 12);
+                    spawnFloatingText(food.x, food.y - 15, "+1 Food!", "#a7f3d0");
+                    updateHUD();
+                }
+            });
+
+            state.foods = state.foods.filter(f => !f.collected);
+            while (state.foods.length < 7 && state.score + state.foods.length < state.targetScore + 3) {
+                spawnFoodItem(minY, maxY);
+            }
+
+            if (state.score >= state.targetScore) {
+                finishLevel(true, "Delicious! You collected 10 small fish and insects for the tara pirohe!");
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // LEVEL 2: AVOID PREDATORS
+        // --------------------------------------------------------------------
+        else if (lvl.id === 2) {
+            state.predators.forEach((pred) => {
+                pred.x += pred.vx * dt;
+                pred.y += pred.vy * dt;
+
+                if (pred.x < width * 0.22 || pred.x > width * 0.84) pred.vx *= -1;
+                if (pred.y < minY + 15 || pred.y > maxY - 15) pred.vy *= -1;
+
+                const dist = Math.hypot(pred.x - p.x, pred.y - p.y);
+                if (dist < p.radius + pred.radius - 4) {
+                    damagePlayer("Predator!");
+                }
+            });
+
+            // Goal Zone on the far right (Nesting Island)
+            if (p.x >= width - 95) {
+                finishLevel(true, "You safely navigated past the stoats, rats, and cats to reach the nesting gravel bar!");
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // LEVEL 3: SAVE THE EGGS
+        // --------------------------------------------------------------------
+        else if (lvl.id === 3) {
+            state.levelTimer -= dt;
+            if (state.levelTimer <= 0) {
+                state.levelTimer = 0;
+                // Hatch remaining eggs!
+                sfx.hatch();
+                finishLevel(true, "The eggs hatched safely into healthy tara pirohe chicks!");
+                return;
+            }
+
+            // Spawn periodic predators
+            if (state.predators.length < 4 && Math.random() < dt * 0.85) {
+                spawnNestPredator(minY, maxY);
+            }
+
+            state.nests.forEach(n => {
+                if (n.flashTimer > 0) n.flashTimer -= dt;
+            });
+
+            state.predators.forEach((pred) => {
+                if (pred.scaredTimer > 0) {
+                    pred.scaredTimer -= dt;
+                    pred.x += pred.vx * dt;
+                    pred.y += pred.vy * dt;
+                    return;
+                }
+
+                // Swooping or flying very close scares the predator away!
+                const distToPlayer = Math.hypot(pred.x - p.x, pred.y - p.y);
+                if (distToPlayer < p.radius + pred.radius + (p.swoopTimer > 0 ? 75 : 16)) {
+                    pred.scaredTimer = 2.5;
+                    const angle = Math.atan2(pred.y - p.y, pred.x - p.x);
+                    pred.vx = Math.cos(angle) * 250;
+                    pred.vy = Math.sin(angle) * 250;
+                    sfx.swoop();
+                    spawnParticles(pred.x, pred.y, '#fde047', 10);
+                    spawnFloatingText(pred.x, pred.y - 20, "Chased off!", "#fef08a");
+                    return;
+                }
+
+                // Move toward nearest active nest
+                const activeNests = state.nests.filter(n => n.eggs > 0);
+                if (activeNests.length > 0) {
+                    let nearest = activeNests[0];
+                    let bestDist = Infinity;
+                    activeNests.forEach(n => {
+                        const d = Math.hypot(n.x - pred.x, n.y - pred.y);
+                        if (d < bestDist) {
+                            bestDist = d;
+                            nearest = n;
+                        }
+                    });
+
+                    const angle = Math.atan2(nearest.y - pred.y, nearest.x - pred.x);
+                    pred.vx = Math.cos(angle) * pred.speed;
+                    pred.vy = Math.sin(angle) * pred.speed;
+                    pred.x += pred.vx * dt;
+                    pred.y += pred.vy * dt;
+
+                    // Check if predator reached nest
+                    if (bestDist < 26) {
+                        nearest.eggs = 0;
+                        nearest.flashTimer = 1.2;
+                        pred.scaredTimer = 2.0;
+                        pred.vx = -pred.vx * 2;
+                        pred.vy = -pred.vy * 2;
+                        sfx.hurt();
+                        spawnParticles(nearest.x, nearest.y, '#f43f5e', 16);
+                        spawnFloatingText(nearest.x, nearest.y - 25, "Nest raided!", "#fda4af");
+
+                        const remaining = state.nests.filter(n => n.eggs > 0).length;
+                        if (remaining === 0) {
+                            finishLevel(false, "Oh no! All the nests were raided by predators. Swoop close to predators to chase them away!");
+                        }
+                    }
+                }
+            });
+
+            // Remove predators that fled far offscreen
+            state.predators = state.predators.filter(
+                pr => pr.x > -80 && pr.x < width + 80 && pr.y > minY - 80 && pr.y < maxY + 80
+            );
+            updateHUD();
+        }
+
+        // --------------------------------------------------------------------
+        // LEVEL 4: CLEAN THE RIVER
+        // --------------------------------------------------------------------
+        else if (lvl.id === 4) {
+            const binX = 85;
+            const binY = height * 0.56;
+
+            state.rubbish.forEach((item) => {
+                if (item.collected) return;
+                item.bobPhase += dt * 3;
+                if (!p.carryingTrash && Math.hypot(item.x - p.x, item.y - p.y) < p.radius + 18) {
+                    item.collected = true;
+                    p.carryingTrash = item.type;
+                    sfx.collect();
+                    spawnFloatingText(p.x, p.y - 25, "Picked up rubbish!", "#bae6fd");
+                    updateHUD();
+                }
+            });
+
+            // Drop at green recycling station on the left bank
+            if (p.carryingTrash && Math.hypot(binX - p.x, binY - p.y) < 55) {
+                p.carryingTrash = false;
+                state.score += 1;
+                sfx.recycle();
+                spawnParticles(binX, binY, '#22c55e', 16);
+                spawnFloatingText(binX, binY - 35, "Recycled! +1", "#86efac");
+                updateHUD();
+
+                if (state.score >= state.targetScore) {
+                    finishLevel(true, "Sparkling clean! Removing rubbish keeps the braided river healthy for fish, insects, and tara pirohe!");
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // LEVEL 5: FINAL LEVEL — SAVE THE TARA PIROHE!
+        // --------------------------------------------------------------------
+        else if (lvl.id === 5) {
+            const sanctuaryX = width - 90;
+
+            // Food pickups (gives speed/heart boost)
+            state.foods.forEach((food) => {
+                food.phase += dt * 4;
+                food.x += food.vx * dt;
+                if (food.x < width * 0.2 || food.x > width * 0.82) food.vx *= -1;
+                if (Math.hypot(food.x - p.x, food.y - p.y) < p.radius + 16) {
+                    food.collected = true;
+                    sfx.collect();
+                    if (state.hearts < 3) state.hearts += 1;
+                    spawnParticles(food.x, food.y, '#34d399', 10);
+                    spawnFloatingText(food.x, food.y - 20, "Yum! Energy Boost!", "#a7f3d0");
+                    updateHUD();
+                }
+            });
+            state.foods = state.foods.filter(f => !f.collected);
+
+            // Predators patrolling river bars
+            state.predators.forEach((pred) => {
+                if (pred.scaredTimer > 0) {
+                    pred.scaredTimer -= dt;
+                    pred.x += pred.vx * dt;
+                    pred.y += pred.vy * dt;
+                    if (pred.x < width * 0.2 || pred.x > width * 0.82) pred.vx *= -1;
+                    if (pred.y < minY + 15 || pred.y > maxY - 15) pred.vy *= -1;
+                    return;
+                }
+
+                pred.y += pred.vy * dt;
+                if (pred.y < minY + 15 || pred.y > maxY - 15) pred.vy *= -1;
+
+                const distToPlayer = Math.hypot(pred.x - p.x, pred.y - p.y);
+                if (p.swoopTimer > 0 && distToPlayer < 130) {
+                    pred.scaredTimer = 2.5;
+                    pred.vx = (pred.x >= p.x ? 1 : -1) * 180;
+                    spawnParticles(pred.x, pred.y, '#fde047', 10);
+                    return;
+                }
+
+                if (distToPlayer < p.radius + pred.radius - 5) {
+                    damagePlayer("Watch out!");
+                }
+            });
+
+            // Baby Chicks AI: Call them by flying near, then lead them to Sanctuary Island!
+            let leaderX = p.x;
+            let leaderY = p.y;
+
+            state.chicks.forEach((chick) => {
+                if (chick.saved) return;
+                chick.hopPhase += dt * 10;
+
+                const distToPlayer = Math.hypot(chick.x - p.x, chick.y - p.y);
+                if (!chick.following && distToPlayer < 65) {
+                    chick.following = true;
+                    sfx.collect();
+                    spawnFloatingText(chick.x, chick.y - 20, "Peep! Following!", "#fef08a");
+                    updateHUD();
+                }
+
+                if (chick.following) {
+                    const dx = leaderX - chick.x;
+                    const dy = leaderY - chick.y;
+                    const d = Math.hypot(dx, dy);
+                    if (d > 38) {
+                        const followSpeed = 245;
+                        chick.x += (dx / d) * followSpeed * dt;
+                        chick.y += (dy / d) * followSpeed * dt;
+                    }
+                    // Chain chicks in a cute line behind the parent bird
+                    leaderX = chick.x;
+                    leaderY = chick.y;
+
+                    // Check if chick hits an unscared predator
+                    state.predators.forEach((pred) => {
+                        if (pred.scaredTimer <= 0 && Math.hypot(pred.x - chick.x, pred.y - chick.y) < pred.radius + 12) {
+                            chick.following = false;
+                            chick.x = 85;
+                            chick.y = height * 0.5;
+                            damagePlayer("Chick startled back!");
+                        }
+                    });
+
+                    // Check if chick reached Sanctuary Island on the right
+                    if (chick.x >= sanctuaryX) {
+                        chick.saved = true;
+                        chick.following = false;
+                        state.birdsSavedTotal += 1;
+                        sfx.hatch();
+                        spawnParticles(chick.x, chick.y, '#34d399', 16);
+                        spawnFloatingText(chick.x - 20, chick.y - 25, "Tara Pirohe Saved! 🎉", "#86efac");
+                        updateHUD();
+                    }
+                }
+            });
+
+            if (state.birdsSavedTotal >= state.targetScore) {
+                finishLevel(true);
+            }
+        }
+
+        // Update particles & floating texts
+        state.particles.forEach((pt) => {
+            pt.x += pt.vx * dt;
+            pt.y += pt.vy * dt;
+            pt.life -= dt;
+        });
+        state.particles = state.particles.filter(pt => pt.life > 0);
+
+        state.floatingTexts.forEach((ft) => {
+            ft.y -= 32 * dt;
+            ft.life -= dt;
+        });
+        state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
+    }
+
+    // ------------------------------------------------------------------------
+    // 10. RENDERING ENGINE (South Island Braided River & Entities)
+    // ------------------------------------------------------------------------
+    function drawBraidedRiverBackground() {
+        // 1. Sky Gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.28);
+        skyGrad.addColorStop(0, '#38bdf8');
+        skyGrad.addColorStop(1, '#e0f2fe');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, width, height * 0.28);
+
+        // 2. Distant Southern Alps (Kā Tiritiri o te Moana)
+        ctx.fillStyle = '#64748b';
+        ctx.beginPath();
+        ctx.moveTo(0, height * 0.25);
+        mountainPeaks.forEach((pk) => {
+            ctx.lineTo(pk.x, pk.peakY);
+        });
+        ctx.lineTo(width, height * 0.25);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow Caps on Peaks
+        ctx.fillStyle = '#f8fafc';
+        mountainPeaks.forEach((pk, idx) => {
+            if (idx < mountainPeaks.length - 1) {
+                const next = mountainPeaks[idx + 1];
+                const midX = (pk.x + next.x) * 0.5;
+                const midY = (pk.peakY + next.peakY) * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(pk.x, pk.peakY);
+                ctx.lineTo((pk.x + midX) * 0.5, (pk.peakY + midY) * 0.5 + 14);
+                ctx.lineTo(midX, midY + 8);
+                ctx.closePath();
+                ctx.fill();
+            }
+        });
+
+        // 3. Shingle Gravel Riverbed Base
+        const gravelGrad = ctx.createLinearGradient(0, height * 0.23, 0, height);
+        gravelGrad.addColorStop(0, '#cbd5e1');
+        gravelGrad.addColorStop(0.5, '#d6d3d1');
+        gravelGrad.addColorStop(1, '#a8a29e');
+        ctx.fillStyle = gravelGrad;
+        ctx.fillRect(0, height * 0.23, width, height * 0.77);
+
+        // 4. Braided Glacial Turquoise River Channels (Winding Interlocking Streams)
+        const waveShift = Math.sin(state.elapsed * 1.2) * 8;
+        ctx.save();
+        ctx.lineCap = 'round';
+
+        // Channel 1 (Upper braided stream)
+        ctx.strokeStyle = '#0ea5e9';
+        ctx.lineWidth = Math.max(36, height * 0.085);
+        ctx.beginPath();
+        ctx.moveTo(-20, height * 0.38);
+        ctx.bezierCurveTo(
+            width * 0.3, height * 0.30 + waveShift,
+            width * 0.65, height * 0.50 - waveShift,
+            width + 20, height * 0.36
+        );
+        ctx.stroke();
+
+        // Channel 2 (Lower braided stream)
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = Math.max(44, height * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(-20, height * 0.72);
+        ctx.bezierCurveTo(
+            width * 0.35, height * 0.84 - waveShift,
+            width * 0.68, height * 0.58 + waveShift,
+            width + 20, height * 0.76
+        );
+        ctx.stroke();
+
+        // Connecting Braid Cross-Channel
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = Math.max(24, height * 0.05);
+        ctx.beginPath();
+        ctx.moveTo(width * 0.32, height * 0.35);
+        ctx.quadraticCurveTo(width * 0.48, height * 0.55, width * 0.56, height * 0.71);
+        ctx.stroke();
+
+        // Sparkle Water Shimmer Lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 8; i++) {
+            const rx = ((i * 190 + state.elapsed * 35) % (width + 100)) - 50;
+            const ry = height * (i % 2 === 0 ? 0.38 : 0.72) + Math.sin(i + state.elapsed) * 6;
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(rx + 28, ry);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // 5. Shingle Pebbles & Golden Tussock Grass Clumps
+        riverPebbles.forEach((pb) => {
+            ctx.fillStyle = pb.color;
+            ctx.beginPath();
+            ctx.ellipse(pb.x, pb.y, pb.rx, pb.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        tussockClumps.forEach((tc) => {
+            ctx.save();
+            ctx.translate(tc.x, tc.y);
+            ctx.scale(tc.scale, tc.scale);
+            ctx.strokeStyle = '#ca8a04';
+            ctx.lineWidth = 2.2;
+            for (let b = -2; b <= 2; b++) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(b * 5, -10, b * 9, -17);
+                ctx.stroke();
+            }
+            ctx.restore();
+        });
+    }
+
+    function drawTaraPirohe(x, y, facing, wingPhase, scale = 1, isChick = false) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(facing * scale, scale);
+
+        if (isChick) {
+            // Cute fluffy grey-and-white tara pirohe chick
+            ctx.fillStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 13, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Speckled down spots
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.arc(-4, -1, 2, 0, Math.PI * 2);
+            ctx.arc(2, -3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Little head
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.arc(10, -4, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tiny orange beak & eye
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.moveTo(16, -5);
+            ctx.lineTo(23, -3);
+            ctx.lineTo(16, -1);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(11, -5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            return;
+        }
+
+        // Adult Tara Pirohe (Black-Fronted Tern)
+        // Blink if invulnerable
+        if (state.player.invulnTimer > 0 && Math.floor(state.player.invulnTimer * 12) % 2 === 0) {
+            ctx.globalAlpha = 0.45;
+        }
+
+        // Swoop aura ring
+        if (state.player.swoopTimer > 0) {
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 38, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Forked tail
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.moveTo(-18, 0);
+        ctx.lineTo(-34, -8);
+        ctx.lineTo(-27, 1);
+        ctx.lineTo(-35, 9);
+        ctx.closePath();
+        ctx.fill();
+
+        // White Body
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(0, 2, 22, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Grey Back & Animated Flapping Wings
+        const wingY = Math.sin(wingPhase) * 14;
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(-8, -2);
+        ctx.quadraticCurveTo(2, -18 - wingY, 12, -2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.stroke();
+
+        // Head (White cheek + Distinctive Black Forehead/Cap)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(20, -4, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Black Forehead & Cap
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(20, -5, 9, Math.PI, 0, false);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(22, -5, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(22.5, -5, 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright Orange Bill
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(28, -6);
+        ctx.lineTo(41, -3);
+        ctx.lineTo(28, -1);
+        ctx.closePath();
+        ctx.fill();
+
+        // If carrying rubbish in Level 4, render held item below claws
+        if (state.player.carryingTrash) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(-6, 12, 14, 9);
+            ctx.strokeStyle = '#0369a1';
+            ctx.strokeRect(-6, 12, 14, 9);
+        }
+
+        ctx.restore();
+    }
+
+    function drawPredator(pred) {
+        ctx.save();
+        ctx.translate(pred.x, pred.y);
+        if (pred.scaredTimer > 0) {
+            ctx.globalAlpha = 0.7;
+        }
+
+        // Danger indicator ring
+        ctx.strokeStyle = pred.scaredTimer > 0 ? 'rgba(250, 204, 21, 0.7)' : 'rgba(244, 63, 94, 0.45)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, pred.radius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Body styling by predator species (Stoat, Rat, Cat)
+        if (pred.type === 'stoat') {
+            // Long sleek brown body with cream belly & black-tipped tail
+            ctx.fillStyle = '#92400e';
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 20, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Black tail tip
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(-22, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (pred.type === 'rat') {
+            // Grey-brown round body & long pink tail
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-14, 4);
+            ctx.quadraticCurveTo(-26, -6, -30, 6);
+            ctx.stroke();
+
+            ctx.fillStyle = '#57534e';
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 17, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Feral Cat (Dark charcoal tabby with pointed ears)
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.ellipse(0, 3, 19, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Pointed ears
+            ctx.beginPath();
+            ctx.moveTo(8, -6);
+            ctx.lineTo(12, -16);
+            ctx.lineTo(16, -6);
+            ctx.moveTo(15, -6);
+            ctx.lineTo(19, -16);
+            ctx.lineTo(22, -6);
+            ctx.fill();
+        }
+
+        // Glowing Yellow Predator Eyes
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(12, -2, 2.5, 0, Math.PI * 2);
+        ctx.arc(17, -2, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label badge
+        ctx.font = 'bold 11px Nunito, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        const label = pred.type.toUpperCase();
+        ctx.strokeText(label, 0, -18);
+        ctx.fillText(label, 0, -18);
+
+        ctx.restore();
+    }
+
+    function drawLevelSpecificElements() {
+        const lvl = LEVELS[state.currentLevelIndex];
+
+        // Foods (Levels 1 & 5)
+        state.foods.forEach((f) => {
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            if (f.type === 'fish') {
+                const dir = f.vx >= 0 ? 1 : -1;
+                ctx.scale(dir, 1);
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-11, 0);
+                ctx.lineTo(-18, -6);
+                ctx.lineTo(-18, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(7, -1.5, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Dragonfly / River Insect
+                ctx.fillStyle = '#a855f7';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 9, 3.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                const flap = Math.sin(f.phase * 4) * 3;
+                ctx.beginPath();
+                ctx.ellipse(-2, -6 + flap, 7, 3, -0.3, 0, Math.PI * 2);
+                ctx.ellipse(3, -6 - flap, 7, 3, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        });
+
+        // Level 2: Safe Nesting Island Zone on Right
+        if (lvl.id === 2) {
+            const zoneX = width - 95;
+            ctx.save();
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.28)';
+            ctx.fillRect(zoneX, height * 0.24, 95, height * 0.76);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 8]);
+            ctx.beginPath();
+            ctx.moveTo(zoneX, height * 0.24);
+            ctx.lineTo(zoneX, height);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.font = 'bold 16px Fredoka, sans-serif';
+            ctx.fillStyle = '#065f46';
+            ctx.textAlign = 'center';
+            ctx.fillText("SAFE", zoneX + 47, height * 0.52);
+            ctx.fillText("NESTING", zoneX + 47, height * 0.56);
+            ctx.fillText("ISLAND", zoneX + 47, height * 0.60);
+            ctx.restore();
+        }
+
+        // Level 3: Gravel Nests & Speckled Eggs
+        if (lvl.id === 3) {
+            state.nests.forEach((n) => {
+                ctx.save();
+                ctx.translate(n.x, n.y);
+
+                // Shallow gravel scrape nest
+                ctx.fillStyle = n.eggs > 0 ? '#78716c' : '#991b1b';
+                ctx.beginPath();
+                ctx.ellipse(0, 4, 28, 16, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#44403c';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                if (n.eggs > 0) {
+                    // Two camouflaged speckled eggs
+                    [-8, 8].forEach((ex) => {
+                        ctx.fillStyle = '#fef3c7';
+                        ctx.beginPath();
+                        ctx.ellipse(ex, 0, 7, 10, 0.15, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#92400e';
+                        ctx.lineWidth = 1.2;
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#78350f';
+                        ctx.beginPath();
+                        ctx.arc(ex - 2, -2, 1.4, 0, Math.PI * 2);
+                        ctx.arc(ex + 2, 3, 1.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                }
+                ctx.restore();
+            });
+        }
+
+        // Level 4: Rubbish Items & Green Recycling Station
+        if (lvl.id === 4) {
+            const binX = 85;
+            const binY = height * 0.56;
+
+            // Green Recycling Station
+            ctx.save();
+            ctx.translate(binX, binY);
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.25)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 52, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#16a34a';
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(-24, -26, 48, 52, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('♻️', 0, 6);
+            ctx.font = 'bold 12px Fredoka, sans-serif';
+            ctx.fillText('DROP RUBBISH', 0, 42);
+            ctx.restore();
+
+            // Rubbish pieces scattered in river
+            state.rubbish.forEach((r) => {
+                if (r.collected) return;
+                ctx.save();
+                ctx.translate(r.x, r.y + Math.sin(r.bobPhase) * 3);
+                if (r.type === 'bottle') {
+                    ctx.fillStyle = '#bae6fd';
+                    ctx.strokeStyle = '#0284c7';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-12, -6, 24, 12, 4);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(12, -3, 4, 6);
+                } else if (r.type === 'can') {
+                    ctx.fillStyle = '#f87171';
+                    ctx.strokeStyle = '#991b1b';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-9, -7, 18, 14, 3);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#fde047';
+                    ctx.strokeStyle = '#a16207';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-11, -7);
+                    ctx.lineTo(11, -5);
+                    ctx.lineTo(8, 8);
+                    ctx.lineTo(-9, 6);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+        }
+
+        // Level 5: Sanctuary Island & Baby Chicks
+        if (lvl.id === 5) {
+            const sanctuaryX = width - 90;
+            ctx.save();
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+            ctx.fillRect(sanctuaryX, height * 0.24, 90, height * 0.76);
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 8]);
+            ctx.beginPath();
+            ctx.moveTo(sanctuaryX, height * 0.24);
+            ctx.lineTo(sanctuaryX, height);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.font = 'bold 15px Fredoka, sans-serif';
+            ctx.fillStyle = '#854d0e';
+            ctx.textAlign = 'center';
+            ctx.fillText("FLOCK", sanctuaryX + 45, height * 0.52);
+            ctx.fillText("SANCTUARY", sanctuaryX + 45, height * 0.56);
+            ctx.restore();
+
+            state.chicks.forEach((chick) => {
+                if (chick.saved) return;
+                const hopY = Math.abs(Math.sin(chick.hopPhase)) * 4;
+                drawTaraPirohe(chick.x, chick.y - hopY, 1, 0, 1, true);
+                if (!chick.following) {
+                    ctx.font = 'bold 11px Nunito, sans-serif';
+                    ctx.fillStyle = '#fef08a';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("Peep!", chick.x, chick.y - 18);
+                }
+            });
+        }
+
+        // Draw Predators
+        state.predators.forEach(drawPredator);
+    }
+
+    function drawParticlesAndText() {
+        state.particles.forEach((pt) => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+            ctx.fillStyle = pt.color;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        state.floatingTexts.forEach((ft) => {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, ft.life);
+            ctx.font = 'bold 16px Fredoka, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(ft.text, ft.x, ft.y);
+            ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        });
+    }
+
+    // ------------------------------------------------------------------------
+    // 11. MAIN ANIMATION LOOP
+    // ------------------------------------------------------------------------
+    function gameLoop(timestamp) {
+        if (!state.lastTime) state.lastTime = timestamp;
+        const dt = Math.min(0.05, (timestamp - state.lastTime) / 1000);
+        state.lastTime = timestamp;
+        state.elapsed += dt;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Always render the living braided river backdrop
+        drawBraidedRiverBackground();
+
+        if (state.mode === 'PLAYING') {
+            updateGameplay(dt);
+            drawLevelSpecificElements();
+            drawTaraPirohe(state.player.x, state.player.y, state.player.facing, state.player.wingPhase, 1.05, false);
+            drawParticlesAndText();
+        } else {
+            // Gentle ambient tara pirohe soaring across the braided river on menu screens
+            const demoX = ((state.elapsed * 90) % (width + 160)) - 80;
+            const demoY = height * 0.45 + Math.sin(state.elapsed * 2) * 35;
+            drawTaraPirohe(demoX, demoY, 1, state.elapsed * 10, 1.1, false);
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = function () {
+        resizeCanvas();
+        showScreen('WELCOME');
+        requestAnimationFrame(gameLoop);
+    };
+})();
+</script>
+</body>
+</html>
